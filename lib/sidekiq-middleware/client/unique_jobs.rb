@@ -21,7 +21,7 @@ module Sidekiq
               expiration = worker_class.get_sidekiq_options['expiration'] || HASH_KEY_EXPIRATION
             end
 
-            payload_hash = Digest::MD5.hexdigest(Sidekiq.dump_json(Hash[payload.sort]))
+            payload_hash = "unique:jobs:" + Digest::MD5.hexdigest(Sidekiq.dump_json(Hash[payload.sort]))
 
             Sidekiq.redis do |conn|
               conn.watch(payload_hash)

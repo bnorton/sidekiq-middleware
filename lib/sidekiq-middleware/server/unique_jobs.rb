@@ -2,22 +2,21 @@ module Sidekiq
   module Middleware
     module Server
       class UniqueJobs
-
         def call(worker_instance, item, queue)
           forever = worker_instance.class.get_sidekiq_options['forever']
 
           # Delete lock first if forever is set
           # Used for jobs which may scheduling self in future
-          clear(worker_instance, item, queue) if forever
+          clear(worker_instance, item) if forever
 
           begin
             yield
           ensure
-            clear(worker_instance, item, queue) unless forever
+            clear(worker_instance, item) unless forever
           end
         end
 
-        def clear(worker_instance, item, queue)
+        def clear(worker_instance, item)
           enabled, payload = worker_instance.class.get_sidekiq_options['unique'], item.clone
 
           payload.delete('jid')
@@ -28,11 +27,10 @@ module Sidekiq
             payload.delete('at')
           end
 
-          payload_hash = Digest::MD5.hexdigest(Sidekiq.dump_json(Hash[payload.sort]))
+          payload_hash = "unique:jobs:" + Digest::MD5.hexdigest(Sidekiq.dump_json(Hash[payload.sort]))
           
           Sidekiq.redis { |conn| conn.del(payload_hash) }
         end
-
       end
     end
   end
